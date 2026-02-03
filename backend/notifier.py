@@ -1,11 +1,15 @@
 import asyncio
 from telegram import Bot
 import os
+from dotenv import load_dotenv
 
-# 텔레그램 설정 (환경 변수 또는 직접 입력)
-# 실제 사용 시 보인 봇의 TOKEN과 CHAT_ID를 입력해야 합니다.
-BOT_TOKEN = "8533785278:AAH3bamJBUNPoXCSeqrruqm3RFWqZ0FDa0Q"
-CHAT_ID = "51251472"
+# .env 파일 로드
+load_dotenv()
+
+# 텔레그램 설정 (환경 변수 사용 권장)
+# .env 파일 또는 시스템 환경 변수에 등록하여 사용하세요.
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID_HERE")
 async def send_telegram_message(message: str):
     """
     텔레그램으로 메시지를 전송합니다.
