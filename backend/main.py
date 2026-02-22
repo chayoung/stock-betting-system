@@ -24,16 +24,32 @@ def read_root():
 def get_backtest_report(background_tasks: BackgroundTasks, start: str = None, end: str = None, notify: bool = False):
     """
     백테스트 리포트를 생성하여 반환합니다.
-    start/end가 없으면 최근 5영업일을 자동으로 분석합니다.
     """
     report = run_backtest(start, end)
     
     if notify:
         msg = format_backtest_report(report)
-        # BackgroundTasks를 통해 응답 반환 후 텔레그램 메시지 전송 실행
         background_tasks.add_task(send_sync_message, msg)
         
     return report
+
+@app.post("/api/kis/test")
+async def run_kis_test(background_tasks: BackgroundTasks):
+    """
+    KIS 모의계좌 정보 및 텔레그램 알림을 테스트합니다.
+    """
+    from check_balance_test import test_account_info
+    background_tasks.add_task(test_account_info)
+    return {"status": "success", "message": "KIS 계좌 테스트가 백그라운드에서 시작되었습니다. 텔레그램을 확인하세요."}
+
+@app.post("/api/kis/batch")
+async def run_kis_batch(background_tasks: BackgroundTasks, mode: str = "buy", force: bool = False):
+    """
+    주식 배치 작업을 수동으로 실행합니다.
+    """
+    from batch_run import run_daily_batch
+    background_tasks.add_task(run_daily_batch, mode, force)
+    return {"status": "success", "message": f"주식 배치({mode}, force={force}) 작업이 백그라운드에서 시작되었습니다."}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -4,7 +4,7 @@ from strategy import select_betting_stocks, calculate_returns
 from datetime import datetime
 import os
 
-def run_backtest(start_date=None, end_date=None):
+def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
     """
     지정된 기간 동안 종가배팅 백테스트를 실행합니다.
     start_date, end_date가 None일 경우 최근 5영업일을 자동으로 선정합니다.
@@ -40,6 +40,7 @@ def run_backtest(start_date=None, end_date=None):
         trading_days = all_trading_days[(all_trading_days >= start_date) & (all_trading_days <= end_date)]
 
     print(f"{start_date}부터 {end_date}까지 (총 {len(trading_days)} 영업일) 백테스트 시작...")
+    print(f"초기 예수금: {initial_balance:,}원")
     
     # 2. 분석 대상 종목 선정 (상위 200개)
     selected_symbols = stocks['Code'].tolist()[:200] 
@@ -60,19 +61,37 @@ def run_backtest(start_date=None, end_date=None):
     
     total_logs = []
     daily_summary = []
+    current_balance = initial_balance
     
     # 4. 날짜별 시뮬레이션
     for day in trading_days:
-        print(f"{day.strftime('%Y-%m-%d')} 분석 중...")
+        print(f"{day.strftime('%Y-%m-%d')} 분석 중 (잔고: {int(current_balance):,}원)...")
         
         picks = select_betting_stocks(daily_data_dict, day)
         if not picks:
+            daily_summary.append({
+                'date': day.strftime('%Y-%m-%d'),
+                'avg_return': 0,
+                'balance': int(current_balance),
+                'count': 0
+            })
             continue
             
         day_results = calculate_returns(picks, daily_data_dict, day)
         if day_results:
+            # 자금 배분: 당일 선정된 종목 수만큼 균등 배분
+            allocation = current_balance / len(day_results)
+            day_profit_krw = 0
+            
             for r in day_results:
                 r['market'] = daily_data_dict[r['symbol']]['Market'].iloc[0]
+                # 개별 종목 수익금 계산
+                profit_krw = allocation * (r['profit_rate'] / 100)
+                day_profit_krw += profit_krw
+                r['profit_krw'] = int(profit_krw)
+                r['invested'] = int(allocation)
+            
+            current_balance += day_profit_krw
             total_logs.extend(day_results)
             
             avg_return = sum([r['profit_rate'] for r in day_results]) / len(day_results)
@@ -88,17 +107,22 @@ def run_backtest(start_date=None, end_date=None):
                 'date': day.strftime('%Y-%m-%d'),
                 'avg_return': round(float(avg_return), 2),
                 'kospi_return': round(float(kospi_return), 2),
+                'balance': int(current_balance),
+                'profit_krw': int(day_profit_krw),
                 'count': len(day_results)
             })
 
     # 5. 결과 집계
-    total_return = sum([r['profit_rate'] for r in total_logs]) if total_logs else 0
+    total_return_pct = ((current_balance - initial_balance) / initial_balance * 100)
     win_trades = [r for r in total_logs if r['profit_rate'] > 0]
     win_rate = (len(win_trades) / len(total_logs) * 100) if total_logs else 0
     
     report = {
         'summary': {
-            'total_profit_rate': round(float(total_return), 2),
+            'initial_balance': initial_balance,
+            'final_balance': int(current_balance),
+            'total_profit_krw': int(current_balance - initial_balance),
+            'total_profit_rate': round(float(total_return_pct), 2),
             'win_rate': round(float(win_rate), 2),
             'total_trades': int(len(total_logs)),
             'period': f"{start_date} ~ {end_date}"

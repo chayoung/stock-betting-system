@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, BarChart3, Activity, Calendar } from 'lucide-react';
+import { TrendingUp, BarChart3, Activity, Calendar, Play, ShieldCheck, ShoppingCart, Tag } from 'lucide-react';
 
 const App = () => {
   const [data, setData] = useState(null);
@@ -15,13 +15,29 @@ const App = () => {
   const [endDate, setEndDate] = useState('');
   const [notify, setNotify] = useState(false);
 
+  const runKisTask = async (taskType, mode = 'buy') => {
+    setLoading(true);
+    try {
+      const url = taskType === 'test'
+        ? '/api/kis/test'
+        : `/api/kis/batch?mode=${mode}&force=true`;
+
+      const response = await axios.post(url);
+      alert(response.data.message);
+    } catch (err) {
+      alert('작업 요청 실패: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchBacktest = async (isInitial = false) => {
     setLoading(true);
     try {
       // 파라미터가 없을 때만 백엔드가 최근 5일을 자동 계산함
       const url = isInitial
-        ? `http://localhost:8000/api/backtest?notify=${notify}`
-        : `http://localhost:8000/api/backtest?start=${startDate}&end=${endDate}&notify=${notify}`;
+        ? `/api/backtest?notify=${notify}`
+        : `/api/backtest?start=${startDate}&end=${endDate}&notify=${notify}`;
 
       const response = await axios.get(url);
       setData(response.data);
@@ -41,8 +57,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    // 마운트 시 최초 1회만 실행 (최근 5일 자동 조회)
-    fetchBacktest(true);
+    // 마운트 시 자동 실행 중지 (사용자 요청)
   }, []);
 
   return (
@@ -92,6 +107,29 @@ const App = () => {
           {error}
         </div>
       )}
+
+      {/* KIS 서비스 제어 섹션 */}
+      <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+        <div>
+          <h3 style={{ margin: 0, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Play size={20} /> KIS 서비스 수동 제어
+          </h3>
+          <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            백그라운드에서 KIS 모의투자 작업을 즉시 실행합니다. (결과는 텔레그램으로 전송됨)
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.8rem' }}>
+          <button className="btn" onClick={() => runKisTask('test')} style={{ background: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <ShieldCheck size={18} /> 계좌 정보 테스트
+          </button>
+          <button className="btn" onClick={() => runKisTask('batch', 'buy')} style={{ background: '#6366f1', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <ShoppingCart size={18} /> 매수 배치 실행
+          </button>
+          <button className="btn" onClick={() => runKisTask('batch', 'sell')} style={{ background: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Tag size={18} /> 매도 배치 실행
+          </button>
+        </div>
+      </div>
 
       {data && (
         <>

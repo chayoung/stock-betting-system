@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    image: harbor.chayoung.kr/kr.chayoung/stock-auto-betting-backend:latest
+    container_name: stock-backend
+    restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    image: harbor.chayoung.kr/kr.chayoung/stock-auto-betting-frontend:latest
+    container_name: stock-frontend
+    restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    ports:
+      - "18001:80"
+    depends_on:
+      - backend
+
+  batch-job:
+    image: harbor.chayoung.kr/kr.chayoung/stock-auto-betting-backend:latest
+    container_name: stock-batch
+    restart: "no"
+    command: ["python", "batch_run.py"]
+
+  # 자동 업데이트를 위한 Watchtower 서비스 추가
+  watchtower:
+    image: containrrr/watchtower
+    container_name: stock-watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      # 아래 변수들은 Portainer UI -> Environment variables에서 직접 값을 입력해 주셔야 합니다.
+      - REPO_USER=${REPO_USER:-admin}
+      - REPO_PASS=${REPO_PASS}
+    command: --interval 60 --cleanup --label-enable
+    # --label-enable을 사용하면 특정 컨테이너에 com.centurylinklabs.watchtower.enable=true 라벨을 붙여 선택적 업데이트 가능

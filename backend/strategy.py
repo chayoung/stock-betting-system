@@ -1,12 +1,11 @@
 import pandas as pd
 
-def select_betting_stocks(daily_data_dict, target_date):
+def select_betting_stocks(daily_data_dict, target_date, mode='SURGE'):
     """
-    특정 날짜(target_date)에 종가배팅할 종목을 선정합니다.
-    기준: 
-    1. 당일 양봉 마감 (종가 > 시가)
-    2. 거래량이 전일 대비 2배 이상 증가
-    3. 거래대금 상위 5개 종목 선정 (간소화를 위해 거래량 * 종가 기준)
+    종가배팅 종목 선정 (모드 선택 가능)
+    - SURGE: 거래량 급증 + 양봉 (Momentum)
+    - PULLBACK: 기준봉 이후 거래량 급감 (Stable)
+    - HYBRID: 두 가지 케이스를 모두 고려 (Optimized)
     """
     candidates = []
     
@@ -14,35 +13,66 @@ def select_betting_stocks(daily_data_dict, target_date):
         if target_date not in df.index:
             continue
             
-        # 해당 날짜 데이터와 전일 데이터 추출
         idx = df.index.get_loc(target_date)
-        if idx < 1: # 전일 데이터가 없으면 스킵
+        if idx < 10:
             continue
             
         today = df.iloc[idx]
         yesterday = df.iloc[idx-1]
         
-        # 1. 양봉 조건
-        if today['Close'] <= today['Open']:
-            continue
-            
-        # 2. 거래량 급증 조건 (전일 대비 2배 이상)
-        if yesterday['Volume'] == 0 or today['Volume'] < yesterday['Volume'] * 2:
-            continue
-            
-        # 거래대금 계산 (종가 * 거래량)
-        amount = today['Close'] * today['Volume']
+        # --- Mode 1: SURGE (기존 급증형) ---
+        is_surge = (today['Close'] > today['Open']) and \
+                   (yesterday['Volume'] > 0 and today['Volume'] >= yesterday['Volume'] * 2)
         
-        candidates.append({
-            'symbol': symbol,
-            'name': today.get('Name', symbol),
-            'close': today['Close'],
-            'amount': amount
-        })
+        # --- Mode 2: PULLBACK (눌림목형) ---
+        # 최근 10일 이내 breakout 탐색
+        recent_df = df.iloc[idx-10:idx]
+        breakout_found = False
+        breakout_vol = 0
+        breakout_close = 0
+        breakout_open = 0
         
-    # 거래대금 순으로 정렬하여 상위 5개 반환
-    selected = sorted(candidates, key=lambda x: x['amount'], reverse=True)[:5]
-    return selected
+        for i in range(len(recent_df)):
+            day = recent_df.iloc[i]
+            if (day['Close'] - day['Open']) / day['Open'] * 100 >= 15:
+                breakout_found = True
+                breakout_vol = day['Volume']
+                breakout_close = day['Close']
+                breakout_open = day['Open']
+        
+        is_pullback = breakout_found and \
+                      (today['Volume'] <= breakout_vol * 0.3) and \
+                      (breakout_open < today['Close'] < breakout_close)
+
+        # 선정 기준 적용
+        selected = False
+        reason = ""
+        
+        if mode == 'SURGE' and is_surge:
+            selected = True
+            reason = "급증"
+        elif mode == 'PULLBACK' and is_pullback:
+            selected = True
+            reason = "눌림목"
+        elif mode == 'HYBRID':
+            if is_pullback:
+                selected = True
+                reason = "하이브리드(눌림)"
+            elif is_surge and breakout_found: # 최근 강했던 종목이 다시 튀는 경우
+                selected = True
+                reason = "하이브리드( momentum)"
+        
+        if selected:
+            candidates.append({
+                'symbol': symbol,
+                'name': today.get('Name', symbol),
+                'close': today['Close'],
+                'amount': today['Close'] * today['Volume'],
+                'reason': reason
+            })
+            
+    # 거래대금 상위 5개
+    return sorted(candidates, key=lambda x: x['amount'], reverse=True)[:5]
 
 def calculate_returns(selected_stocks, daily_data_dict, buy_date):
     """

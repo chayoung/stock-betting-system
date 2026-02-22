@@ -21,7 +21,8 @@ async def send_telegram_message(message: str):
     try:
         # python-telegram-bot v20+ 에서는 봇 객체를 컨텍스트 매니저로 사용하는 것이 권장됩니다.
         async with Bot(token=BOT_TOKEN) as bot:
-            await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode='Markdown')
+            # Markdown 파싱 에러 방지를 위해 기본적으로는 파싱을 하지 않거나 명시적으로 받을 수 있게 수정
+            await bot.send_message(chat_id=CHAT_ID, text=message)
             print("텔레그램 메시지 전송 완료")
             return True
     except Exception as e:
@@ -31,13 +32,35 @@ async def send_telegram_message(message: str):
 def send_sync_message(message: str):
     """
     동기 방식으로 메시지를 보낼 수 있는 래퍼 함수입니다.
-    이벤트 루프가 상이한 환경에서도 안전하게 작동하도록 수정합니다.
+    이미 실행 중인 이벤트 루프가 있는 경우와 없는 경우를 모두 처리합니다.
     """
     try:
-        # 새 이벤트 루프 생성 및 실행 (BackgroundTasks 환경 대응)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(send_telegram_message(message))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # 이미 루프가 실행 중인 경우 (비동기 함수 내부에서 호출된 경우 등)
+            # 이 경우에는 사실 await send_telegram_message를 쓰는 것이 정석이지만,
+            # 하위 호환성을 위해 스레드 세이프하게 스케줄링만 시도하거나 경고를 출력합니다.
+            import threading
+            print("[주의] 이미 실행 중인 이벤트 루프에서 동기 래퍼를 호출했습니다. 비동기 await 사용을 권장합니다.")
+            # 강제로 실행하려면 새로운 스레드에서 루프를 돌려야 함
+            result = [None]
+            def run_in_new_loop():
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                result[0] = new_loop.run_until_complete(send_telegram_message(message))
+                new_loop.close()
+            
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+            return result[0]
+        else:
+            # 실행 중인 루프가 없는 경우
+            return asyncio.run(send_telegram_message(message))
     except Exception as e:
         print(f"동기 메시지 전송 중 오류: {e}")
         return False
@@ -62,4 +85,17 @@ def format_backtest_report(report: dict):
         msg += f"- {trade['buy_date']}: {trade['name']} ({p_rate:.2f}%)\n"
         
     msg += "\n더 자세한 리포트는 대시보드에서 확인하세요!"
+    # 백테스트 리포트처럼 마크다운이 필요한 경우를 위해 별도 함수 보강 가능
+    # 여기서는 간단히 기본 발송 함수가 파싱을 안 하도록 수정함
     return msg
+
+async def send_markdown_message(message: str):
+    """마크다운 형식이 포함된 메시지를 보냅니다."""
+    async with Bot(token=BOT_TOKEN) as bot:
+        try:
+            await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode='Markdown')
+            return True
+        except Exception as e:
+            print(f"마크다운 전송 실패, 일반 텍스트로 전환: {e}")
+            await bot.send_message(chat_id=CHAT_ID, text=message)
+            return True
