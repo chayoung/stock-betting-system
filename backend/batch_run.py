@@ -23,6 +23,10 @@ async def run_daily_batch(mode="buy", force=False):
     print(f"[{now}] 주식 배치 작업 시작 (모드: {mode})...")
     
     try:
+        # KIS API 설정 확인
+        if not kis_api.APP_KEY or not kis_api.APP_SECRET:
+            raise Exception("KIS API 설정(KEY, SECRET)이 누락되었습니다. 컨테이너 환경 변수를 확인하세요.")
+
         # KIS API 토큰 발급
         token = kis_api.get_access_token()
         if not token:

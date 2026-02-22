@@ -7,21 +7,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 텔레그램 설정 (환경 변수 사용 권장)
-# .env 파일 또는 시스템 환경 변수에 등록하여 사용하세요.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID_HERE")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
 async def send_telegram_message(message: str):
     """
     텔레그램으로 메시지를 전송합니다.
     """
-    if BOT_TOKEN == "YOUR_BOT_TOKEN" or CHAT_ID == "YOUR_CHAT_ID":
-        print("[경고] 텔레그램 BOT_TOKEN 또는 CHAT_ID가 설정되지 않았습니다.")
+    # 설정 누락 확인 (기본값이나 빈 값인 경우)
+    if not BOT_TOKEN or "YOUR" in BOT_TOKEN or not CHAT_ID or "YOUR" in CHAT_ID:
+        print(f"[경고] 텔레그램 설정이 완료되지 않았습니다. (TOKEN: {'OK' if BOT_TOKEN and 'YOUR' not in BOT_TOKEN else 'Missing'}, ID: {'OK' if CHAT_ID and 'YOUR' not in CHAT_ID else 'Missing'})")
         return False
         
     try:
         # python-telegram-bot v20+ 에서는 봇 객체를 컨텍스트 매니저로 사용하는 것이 권장됩니다.
         async with Bot(token=BOT_TOKEN) as bot:
-            # Markdown 파싱 에러 방지를 위해 기본적으로는 파싱을 하지 않거나 명시적으로 받을 수 있게 수정
             await bot.send_message(chat_id=CHAT_ID, text=message)
             print("텔레그램 메시지 전송 완료")
             return True

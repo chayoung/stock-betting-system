@@ -13,8 +13,38 @@ ACNT_PRDT_CD = os.getenv("KIS_ACNT_PRDT_CD", "01")
 # 기본값은 모의투자 서버
 URL_BASE = os.getenv("KIS_URL", "https://openapivts.koreainvestment.com:29443")
 
-def get_access_token():
-    """접근 토큰 발급 (OAuth2)"""
+import time
+
+def check_config():
+    """필수 설정 확인"""
+    if not APP_KEY or not APP_SECRET or not CANO:
+        missing = []
+        if not APP_KEY: missing.append("KIS_APP_KEY")
+        if not APP_SECRET: missing.append("KIS_APP_SECRET")
+        if not CANO: missing.append("KIS_CANO")
+        print(f"[오류] KIS API 필수 설정 중 다음 항목이 누락되었습니다: {', '.join(missing)}")
+        return False
+    return True
+
+TOKEN_FILE = "token_cache.json"
+
+def get_access_token(retries=3, delay=2):
+    """접근 토큰 발급 (OAuth2) - 캐싱 및 재시도 로직 포함"""
+    if not check_config():
+        return None
+
+    # 1. 캐시된 토큰 확인 (12시간 이내)
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, "r") as f:
+                cache = json.load(f)
+                # 발급된 지 12시간 이내면 재사용
+                if time.time() - cache.get("timestamp", 0) < 3600 * 12:
+                    print("✅ 캐시된 KIS 토큰 사용")
+                    return cache.get("access_token")
+        except:
+            pass
+
     url = f"{URL_BASE}/oauth2/tokenP"
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -22,9 +52,31 @@ def get_access_token():
         "appkey": APP_KEY,
         "appsecret": APP_SECRET
     }
-    res = requests.post(url, headers=headers, data=json.dumps(payload))
-    if res.status_code == 200:
-        return res.json().get("access_token")
+    
+    for i in range(retries):
+        try:
+            res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
+            if res.status_code == 200:
+                token_data = res.json()
+                access_token = token_data.get("access_token")
+                
+                # 토큰 캐시 저장
+                with open(TOKEN_FILE, "w") as f:
+                    json.dump({
+                        "access_token": access_token,
+                        "timestamp": time.time()
+                    }, f)
+                
+                print("✅ 새 KIS 액세스 토큰 발급 및 저장 성공")
+                return access_token
+            else:
+                print(f"⚠️ 토큰 발급 시도 {i+1}/{retries} 실패: {res.status_code} {res.text}")
+        except Exception as e:
+            print(f"⚠️ 토큰 발급 중 예외 발생 {i+1}/{retries}: {e}")
+            
+        if i < retries - 1:
+            time.sleep(delay)
+            
     return None
 
 def place_order(token, symbol, qty, price=0, side="buy"):

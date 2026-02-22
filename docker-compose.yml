@@ -9,6 +9,14 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     ports:
       - "8000:8000"
+    environment:
+      - KIS_APP_KEY=${KIS_APP_KEY}
+      - KIS_APP_SECRET=${KIS_APP_SECRET}
+      - KIS_CANO=${KIS_CANO}
+      - KIS_ACNT_PRDT_CD=${KIS_ACNT_PRDT_CD:-01}
+      - KIS_URL=${KIS_URL:-https://openapivts.koreainvestment.com:29443}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 
   frontend:
     image: harbor.chayoung.kr/kr.chayoung/stock-auto-betting-frontend:latest
