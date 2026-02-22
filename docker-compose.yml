@@ -47,5 +47,5 @@ services:
       # 아래 변수들은 Portainer UI -> Environment variables에서 직접 값을 입력해 주셔야 합니다.
       - REPO_USER=${REPO_USER:-admin}
       - REPO_PASS=${REPO_PASS}
-    command: --interval 60 --cleanup --label-enable
+    command: --interval 60 --cleanup --label-enable --scope stock
     # --label-enable을 사용하면 특정 컨테이너에 com.centurylinklabs.watchtower.enable=true 라벨을 붙여 선택적 업데이트 가능
