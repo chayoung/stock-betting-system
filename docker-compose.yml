@@ -7,6 +7,7 @@ services:
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.scope=stock"
     ports:
       - "8000:8000"
     environment:
@@ -24,6 +25,7 @@ services:
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.scope=stock"
     ports:
       - "18001:80"
     depends_on:
