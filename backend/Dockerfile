@@ -16,6 +16,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Set timezone to KST
+ENV TZ=Asia/Seoul
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+
 # Copy only installed packages from builder
 COPY --from=builder /root/.local /root/.local
 COPY . .

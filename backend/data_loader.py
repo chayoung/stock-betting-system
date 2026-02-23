@@ -8,9 +8,15 @@ def get_stock_list():
     KOSPI와 KOSDAQ 종목 리스트를 가져옵니다.
     """
     print("종목 리스트를 불러오는 중...")
-    df_krx = fdr.StockListing('KRX') # KOSPI, KOSDAQ, KONEX 포함
-    # 코스피(STK)와 코스닥(KSQ)만 필터링
-    df_stocks = df_krx[df_krx['Market'].isin(['KOSPI', 'KOSDAQ'])]
+    try:
+        df_kospi = fdr.StockListing('KOSPI')
+        df_kosdaq = fdr.StockListing('KOSDAQ')
+        df_stocks = pd.concat([df_kospi, df_kosdaq], ignore_index=True)
+    except Exception as e:
+        print(f"데이터 로딩 실패: {e}")
+        # 예외 상황 대비하여 빈 데이터프레임 반환
+        return pd.DataFrame(columns=['Code', 'Name', 'Market'])
+        
     return df_stocks[['Code', 'Name', 'Market']]
 
 # 특정 기간의 OHLCV 데이터를 가져오는 함수

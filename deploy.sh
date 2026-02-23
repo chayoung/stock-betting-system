@@ -13,12 +13,12 @@ echo "🚀 배포 프로세스를 시작합니다..."
 
 # 2. Backend 빌드 및 태그 설정
 echo "📦 백엔드 이미지 빌드 중 (linux/amd64)..."
-docker build --platform linux/amd64 -t $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-backend:latest ./backend
+docker build --no-cache --platform linux/amd64 -t $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-backend:latest ./backend
 docker tag $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-backend:latest $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-backend:$TAG
 
 # 3. Frontend 빌드 및 태그 설정
 echo "📦 프론트엔드 이미지 빌드 중 (linux/amd64)..."
-docker build --platform linux/amd64 -t $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-frontend:latest ./frontend
+docker build --no-cache --platform linux/amd64 -t $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-frontend:latest ./frontend
 docker tag $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-frontend:latest $HARBOR_DOMAIN/$PROJECT_NAME/$IMAGE_NAME-frontend:$TAG
 
 # 4. Harbor로 푸시

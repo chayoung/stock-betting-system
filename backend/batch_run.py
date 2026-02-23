@@ -8,9 +8,12 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from database import init_db, insert_trade
 
-# .env 파일 로드
 load_dotenv()
+
+# DB 초기화
+init_db()
 
 async def run_daily_batch(mode="buy", force=False):
     """
@@ -31,6 +34,9 @@ async def run_daily_batch(mode="buy", force=False):
         token = kis_api.get_access_token()
         if not token:
             raise Exception("KIS API 접근 토큰 발급에 실패했습니다. API 키를 확인하세요.")
+            
+        # 모의투자 / 실전투자 여부 확인
+        trade_type = "MOCK" if "openapivts" in kis_api.URL_BASE else "REAL"
 
         # 1. 오늘이 실제 장이 열린 날인지 확인
         check_start = (now - timedelta(days=7)).strftime('%Y-%m-%d')
@@ -57,6 +63,20 @@ async def run_daily_batch(mode="buy", force=False):
                 for trade in report['trades']:
                     res = kis_api.place_order(token, trade['symbol'], qty=1, side="buy")
                     order_results.append(f"- {trade['name']}: {res.get('msg1')}")
+                    
+                    # 주문 성공/접수 시 DB 기록
+                    if res.get('rt_cd') == '0':
+                        insert_trade(
+                            date=today_str,
+                            symbol=trade['symbol'],
+                            name=trade['name'],
+                            price=trade['buy_price'],
+                            action="BUY",
+                            trade_type=trade_type,
+                            reason=trade.get('reason', ''),
+                            qty=1,
+                            profit=0.0
+                        )
                 
                 summary_msg = f"🚀 [모의투자 매수 집행] {today_str}\n"
                 summary_msg += "\n".join(order_results) + "\n\n"
@@ -76,6 +96,21 @@ async def run_daily_batch(mode="buy", force=False):
                         name = stock.get('prdt_name')
                         res = kis_api.place_order(token, symbol, qty=qty, side="sell")
                         sell_results.append(f"- {name}({symbol}): {qty}주 매도 - {res.get('msg1')}")
+                        
+                        # 주문 성공/접수 시 DB 기록
+                        if res.get('rt_cd') == '0':
+                            profit_amt = float(stock.get('evlu_pfls_amt', 0))
+                            insert_trade(
+                                date=today_str,
+                                symbol=symbol,
+                                name=name,
+                                price=float(stock.get('prpr', 0)), # 현재가(종가/시가) 기준
+                                action="SELL",
+                                trade_type=trade_type,
+                                reason="전일 종가배팅 매도",
+                                qty=qty,
+                                profit=profit_amt
+                            )
                 
                 if sell_results:
                     summary_msg = f"💰 [모의투자 매도 집행] {today_str}\n"

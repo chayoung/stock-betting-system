@@ -12,6 +12,10 @@ RUN npm run build
 # Nginx to serve static files
 FROM nginx:alpine
 
+# Set timezone to KST
+ENV TZ=Asia/Seoul
+RUN apk add --no-cache tzdata
+
 COPY --from=build /app/dist /usr/share/nginx/html
 # Custom nginx config to handle SPA routing if needed
 COPY nginx.conf /etc/nginx/conf.d/default.conf

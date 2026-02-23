@@ -26,7 +26,9 @@ def check_config():
         return False
     return True
 
-TOKEN_FILE = "token_cache.json"
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+TOKEN_FILE = os.path.join(DATA_DIR, "token_cache.json")
 
 def get_access_token(retries=3, delay=2):
     """접근 토큰 발급 (OAuth2) - 캐싱 및 재시도 로직 포함"""

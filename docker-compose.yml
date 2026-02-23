@@ -10,12 +10,16 @@ services:
       - "com.centurylinklabs.watchtower.scope=stock"
     ports:
       - "8000:8000"
+    volumes:
+      - /volume1/docker/stock/data:/app/data
     environment:
       - KIS_APP_KEY=${KIS_APP_KEY}
       - KIS_APP_SECRET=${KIS_APP_SECRET}
       - KIS_CANO=${KIS_CANO}
       - KIS_ACNT_PRDT_CD=${KIS_ACNT_PRDT_CD:-01}
       - KIS_URL=${KIS_URL:-https://openapivts.koreainvestment.com:29443}
+      - ADMIN_ID=${ADMIN_ID:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-admin1234}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 
@@ -35,6 +39,8 @@ services:
     image: harbor.chayoung.kr/kr.chayoung/stock-auto-betting-backend:latest
     container_name: stock-batch
     restart: "no"
+    volumes:
+      - /volume1/docker/stock/data:/app/data
     command: ["python", "batch_run.py"]
 
   # 자동 업데이트를 위한 Watchtower 서비스 추가
@@ -46,8 +52,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_SCOPE=stock
       # 아래 변수들은 Portainer UI -> Environment variables에서 직접 값을 입력해 주셔야 합니다.
       - REPO_USER=${REPO_USER:-admin}
       - REPO_PASS=${REPO_PASS}
-    command: --interval 60 --cleanup --label-enable --scope stock
     # --label-enable을 사용하면 특정 컨테이너에 com.centurylinklabs.watchtower.enable=true 라벨을 붙여 선택적 업데이트 가능
