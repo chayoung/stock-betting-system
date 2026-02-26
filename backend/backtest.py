@@ -42,8 +42,8 @@ def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
     print(f"{start_date}부터 {end_date}까지 (총 {len(trading_days)} 영업일) 백테스트 시작...")
     print(f"초기 예수금: {initial_balance:,}원")
     
-    # 2. 분석 대상 종목 선정 (상위 200개)
-    selected_symbols = stocks['Code'].tolist()[:200] 
+    # 2. 분석 대상 종목 선정 (상위 1000개)
+    selected_symbols = stocks['Code'].tolist()[:1000] 
     daily_data_dict = {}
     print("데이터 로딩 중...")
     
@@ -62,12 +62,15 @@ def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
     total_logs = []
     daily_summary = []
     current_balance = initial_balance
+    last_day_signals = [] # 마지막 날의 선정 종목 저장용
     
     # 4. 날짜별 시뮬레이션
     for day in trading_days:
         print(f"{day.strftime('%Y-%m-%d')} 분석 중 (잔고: {int(current_balance):,}원)...")
         
         picks = select_betting_stocks(daily_data_dict, day)
+        last_day_signals = picks # 매 루프마다 갱신하여 마지막 날의 상태 기록
+        
         if not picks:
             daily_summary.append({
                 'date': day.strftime('%Y-%m-%d'),
@@ -129,6 +132,7 @@ def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
         },
         'daily_returns': daily_summary,
         'trades': total_logs,
+        'signals': last_day_signals, # 추가: 당일 매매 후보 리스트
         'start_date': start_date,
         'end_date': end_date
     }
