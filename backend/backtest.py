@@ -48,13 +48,18 @@ def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
     print("데이터 로딩 중...")
     
     for symbol in selected_symbols:
-        df = get_ohlcv_data(symbol, fetch_start, fetch_end)
-        if not df.empty:
-            name = stocks[stocks['Code'] == symbol]['Name'].values[0]
-            market = stocks[stocks['Code'] == symbol]['Market'].values[0]
-            df['Name'] = name
-            df['Market'] = market
-            daily_data_dict[symbol] = df
+        try:
+            df = get_ohlcv_data(symbol, fetch_start, fetch_end)
+            if not df.empty:
+                # 종목 정보 안전하게 추출
+                stock_info = stocks[stocks['Code'] == symbol]
+                if not stock_info.empty:
+                    df['Name'] = stock_info['Name'].values[0]
+                    df['Market'] = stock_info['Market'].values[0]
+                    daily_data_dict[symbol] = df
+        except Exception as e:
+            print(f"종목 분석 중 건너뜀 ({symbol}): {e}")
+            continue
 
     # 3. KOSPI 지수 데이터 가져오기 (비교용)
     kospi_data = get_ohlcv_data('KS11', fetch_start, fetch_end)
