@@ -48,6 +48,11 @@ services:
     image: containrrr/watchtower
     container_name: stock-watchtower
     restart: always
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    extra_hosts:
+      - "harbor.chayoung.kr:172.30.1.40"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
