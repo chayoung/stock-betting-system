@@ -114,8 +114,21 @@ def place_order(token, symbol, qty, price=0, side="buy"):
         "ORD_UNPR": str(price) if price > 0 else "0"
     }
     
-    res = requests.post(url, headers=headers, data=json.dumps(payload))
-    return res.json()
+    # 429 과부하 방지를 위한 미세 지연 (Trading Bot Robustness Skill 적용)
+    time.sleep(0.2)
+    
+    try:
+        res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
+        res_data = res.json()
+        
+        # 상세 에러 로깅 (EGW00001 등 대응)
+        if res_data.get('rt_cd') != '0':
+            print(f"⚠️ 주문 실패 [{symbol}]: {res_data.get('rt_cd')} - {res_data.get('msg1')}")
+            
+        return res_data
+    except Exception as e:
+        print(f"🚨 주문 시도 중 통신 에러 발생: {e}")
+        return {"rt_cd": "E_CONN", "msg1": str(e)}
 
 def get_balance(token):
     """주식 잔고 및 예수금 조회"""

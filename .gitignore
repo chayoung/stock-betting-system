@@ -16,8 +16,11 @@ nosetests.xml
 coverage.xml
 *.cover
 *.log
-.mypy_cache/
 .pytest_cache/
+venv_new/
+backend/data/
+*.db
+token_cache.json
 
 # Node
 node_modules/

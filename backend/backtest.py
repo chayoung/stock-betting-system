@@ -42,8 +42,8 @@ def run_backtest(start_date=None, end_date=None, initial_balance=2000000):
     print(f"{start_date}부터 {end_date}까지 (총 {len(trading_days)} 영업일) 백테스트 시작...")
     print(f"초기 예수금: {initial_balance:,}원")
     
-    # 2. 분석 대상 종목 선정 (상위 1000개)
-    selected_symbols = stocks['Code'].tolist()[:1000] 
+    # 2. 분석 대상 종목 선정 (상위 300개 - USER 요청으로 축소)
+    selected_symbols = stocks['Code'].tolist()[:300] 
     daily_data_dict = {}
     print("데이터 로딩 중...")
     
