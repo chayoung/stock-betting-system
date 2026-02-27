@@ -14,19 +14,19 @@ def select_betting_stocks(daily_data_dict, target_date, mode='SURGE'):
             continue
             
         idx = df.index.get_loc(target_date)
-        if idx < 10:
+        if idx < 1:
             continue
-            
+
         today = df.iloc[idx]
         yesterday = df.iloc[idx-1]
-        
+
         # --- Mode 1: SURGE (기존 급증형) ---
         is_surge = (today['Close'] > today['Open']) and \
                    (yesterday['Volume'] > 0 and today['Volume'] >= yesterday['Volume'] * 2)
-        
+
         # --- Mode 2: PULLBACK (눌림목형) ---
-        # 최근 10일 이내 breakout 탐색
-        recent_df = df.iloc[idx-10:idx]
+        # 최근 10일 이내 breakout 탐색 (데이터가 10일 미만이면 skip)
+        recent_df = df.iloc[max(0, idx-10):idx]
         breakout_found = False
         breakout_vol = 0
         breakout_close = 0
